@@ -52,6 +52,11 @@ class ARushHourCharacter : public ACharacter
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 		class UInputAction* LookAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
+		float SlideSpeedThreshold = 20;
+
+	float SlideCooldown = 1;
 	
 public:
 	ARushHourCharacter();
