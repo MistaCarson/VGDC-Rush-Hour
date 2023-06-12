@@ -56,8 +56,9 @@ class ARushHourCharacter : public ACharacter
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
 		float SlideSpeedThreshold = 20;
 
-	float SlideCooldown = 1;
-	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
+		class UWallRunComponent* WallRunComp;
+
 public:
 	ARushHourCharacter();
 	void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
@@ -67,6 +68,7 @@ public:
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+	void Landed(const FHitResult& Hit) override;
 
 
 protected:
@@ -86,5 +88,12 @@ private:
 	void Look(const FInputActionValue& Value);
 
 	void Sprint(const FInputActionValue& Value);
+
+#if WITH_EDITORONLY_DATA
+private:
+	UPROPERTY(EditAnywhere, Category = "Debug")
+		bool PrintCharacterSpeedToScreen;
+#endif
+
 };
 

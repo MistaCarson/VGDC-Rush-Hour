@@ -7,6 +7,10 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "MovementComponents/WallRunComponent.h"
+#if WITH_EDITOR
+	#include "Kismet/KismetSystemLibrary.h"
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -33,6 +37,8 @@ ARushHourCharacter::ARushHourCharacter()
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 	CrouchEyeOffset = FVector(0);
 	CrouchSpeed = 13;
+
+	WallRunComp = CreateDefaultSubobject<UWallRunComponent>(TEXT("Wall Run Component"));
 }
 
 void ARushHourCharacter::BeginPlay()
@@ -48,7 +54,7 @@ void ARushHourCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
-
+	WallRunComp->Initialize(this);
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -61,9 +67,10 @@ void ARushHourCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 		//Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, WallRunComp, &UWallRunComponent::Jump);
 		//Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ARushHourCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ARushHourCharacter::Move);
 
 		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ARushHourCharacter::Look);
@@ -87,6 +94,7 @@ void ARushHourCharacter::Move(const FInputActionValue& Value)
 		// add movement 
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
 		AddMovementInput(GetActorRightVector(), MovementVector.X);
+		WallRunComp->SetForwardInput(FMath::Clamp(MovementVector.Y, 0, 1));
 	}
 }
 
@@ -107,6 +115,13 @@ void ARushHourCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	float CrouchInterpTime = FMath::Min(1.f, CrouchSpeed * DeltaSeconds);
 	CrouchEyeOffset = (1.f - CrouchInterpTime) * CrouchEyeOffset;
+
+	#if WITH_EDITOR
+	if (PrintCharacterSpeedToScreen) {
+		UKismetSystemLibrary::PrintString(GetWorld(), *FString::Printf(TEXT("Current Speed: %f"), GetMovementComponent()->Velocity.Length()), true, false, FColor::Red);
+	}
+	#endif
+		
 }
 
 void ARushHourCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
@@ -152,4 +167,9 @@ void ARushHourCharacter::Sprint(const FInputActionValue& Value)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 600;
 	}
+}
+
+void ARushHourCharacter::Landed(const FHitResult& Hit) {
+	Super::Landed(Hit);
+	WallRunComp->Land();
 }
