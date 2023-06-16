@@ -162,7 +162,7 @@ void ARushHourCharacter::Sprint(const FInputActionValue& Value)
 {
 	const bool val = Value.Get<bool>();
 	if (val) {
-		GetCharacterMovement()->MaxWalkSpeed = 1000;
+		GetCharacterMovement()->MaxWalkSpeed = 1200;
 	} else
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 600;
