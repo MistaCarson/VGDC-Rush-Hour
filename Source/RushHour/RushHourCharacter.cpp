@@ -67,7 +67,7 @@ void ARushHourCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 		//Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, WallRunComp, &UWallRunComponent::Jump);
+		//EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, WallRunComp, &UWallRunComponent::Jump);
 		//Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ARushHourCharacter::Move);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ARushHourCharacter::Move);
@@ -115,7 +115,7 @@ void ARushHourCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	float CrouchInterpTime = FMath::Min(1.f, CrouchSpeed * DeltaSeconds);
 	CrouchEyeOffset = (1.f - CrouchInterpTime) * CrouchEyeOffset;
-
+	JumpMaxCount = AbilityData->NumberMidairJumps + 1;
 	#if WITH_EDITOR
 	if (PrintCharacterSpeedToScreen) {
 		UKismetSystemLibrary::PrintString(GetWorld(), *FString::Printf(TEXT("Current Speed: %f"), GetMovementComponent()->Velocity.Length()), true, false, FColor::Red);
@@ -172,4 +172,12 @@ void ARushHourCharacter::Sprint(const FInputActionValue& Value)
 void ARushHourCharacter::Landed(const FHitResult& Hit) {
 	Super::Landed(Hit);
 	WallRunComp->Land();
+}
+
+void ARushHourCharacter::Jump() {
+	if (WallRunComp->IsWallRunning()) {
+		WallRunComp->Jump();
+	} else {
+		Super::Jump();
+	}
 }

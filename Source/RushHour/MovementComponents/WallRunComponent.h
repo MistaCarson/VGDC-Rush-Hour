@@ -30,16 +30,22 @@ public:
 	void Land();
 
 	void SetForwardInput(float forwardInput);
+	
+	bool IsWallRunning();
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-	// Modifier for speed of the character while wall running
+
+	// Multiplier for the forace applied to the character while wall running
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BlueprintProtected = "true"))
-	float WallRunSpeed = 850;
+	float WallRunForceMultiplier = 70000;
+	// Max Velocity Wall running can bring the character up to
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BlueprintProtected = "true"))
+	float MaxWallRunVelocity = 1500;
 	// Time after stopping a wall run before another should start
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BlueprintProtected = "true"))
-	float WallRunCooldown = 1;
+	float WallRunCooldown = .25;
 	//Amount of tilt the camera should have while running
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BlueprintProtected = "true"))
 	float CameraTiltAmount = 15;
@@ -51,7 +57,7 @@ protected:
 	float WallRunTargetGravity = .4;
 	// Height of jump after exiting a wall run
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BlueprintProtected = "true"))
-	float WallRunJumpHeight = 400;
+	float WallRunJumpHeight = 500;
 	// How much force should be applied off the wall when jumping off
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BlueprintProtected = "true"))
 	float WallRunJumpForce = 300;
@@ -72,8 +78,6 @@ private:
 	bool WallRunningRight = false;
 	bool WallRunningLeft = false;
 	bool WallRunOnCooldown = false;
-	// Consistently called update function
-	void WallRunUpdate();
 	// Called when wall run is over to reset stuff
 	void WallRunEnd();
 	// Called when the wall run cooldown expires

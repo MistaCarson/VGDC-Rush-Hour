@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Data/LoadoutData.h"
 #include "RushHourCharacter.generated.h"
 
 class UInputComponent;
@@ -13,6 +14,7 @@ class USceneComponent;
 class UCameraComponent;
 class UAnimMontage;
 class USoundBase;
+
 
 UCLASS(config=Game)
 class ARushHourCharacter : public ACharacter
@@ -74,11 +76,14 @@ public:
 protected:
 	virtual void BeginPlay();
 	virtual void Tick(float DeltaSeconds) override;
-
+	virtual void Jump() override;
 
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BlueprintProtected = "true"))
+	ULoadoutData* AbilityData;
 
 private:
 	/** Called for movement input */

@@ -8,14 +8,11 @@
 #if WITH_EDITOR
 #include "DrawDebugHelpers.h"
 #endif
-// Sets default values for this component's properties
+
+
 UWallRunComponent::UWallRunComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
 
 
@@ -23,9 +20,6 @@ UWallRunComponent::UWallRunComponent()
 void UWallRunComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
-
 }
 
 
@@ -42,7 +36,42 @@ void UWallRunComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	else {
 		CameraTilt(0);
 	}
-	// ...
+		if (WallRunOnCooldown) {
+		return;
+	}	
+	TArray<FVector> vectors = GetRightLeftVectors();
+	if (WallRunMovement(vectors[0], 1)) {
+		WallRunning = true;
+		WallRunningRight = true;
+		WallRunningLeft = false;
+		CharacterMovement->AirControl = 0;
+		if (UseGravity) {
+			CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, DeltaTime, 10);
+		} else {
+			CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, 0, DeltaTime, 10);
+			CharacterMovement->Velocity.Z = FMath::FInterpTo(CharacterMovement->Velocity.Z, 0, DeltaTime, 10);
+		}
+	}
+	else if (WallRunningRight) {
+		WallRunEnd();
+	}
+	else {
+		if (WallRunMovement(vectors[1], -1)) {
+			WallRunning = true;
+			WallRunningRight = false;
+			WallRunningLeft = true;
+			CharacterMovement->AirControl = 0;
+			if (UseGravity) {
+				CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, DeltaTime, 10);
+			} else {
+				CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, 0, DeltaTime, 10);
+				CharacterMovement->Velocity.Z = FMath::FInterpTo(CharacterMovement->Velocity.Z, 0, DeltaTime, 10);
+			}
+		}
+		else {
+			WallRunEnd();
+		}
+	}
 }
 
 void UWallRunComponent::CameraTilt(float roll) {
@@ -56,7 +85,6 @@ void UWallRunComponent::Initialize(ACharacter* player) {
 	Character = player;
 	CharacterMovement = Character->GetCharacterMovement();
 	DefaultGravity = CharacterMovement->GravityScale;
-	GetOwner()->GetWorldTimerManager().SetTimer(WallRunUpdateTimer, this, &UWallRunComponent::WallRunUpdate, .02f, true, .02f);
 }
 
 void UWallRunComponent::Jump() {
@@ -71,47 +99,6 @@ void UWallRunComponent::Jump() {
 void UWallRunComponent::Land() {
 	WallRunEnd();
 	WallRunOnCooldown = false;
-}
-
-void UWallRunComponent::WallRunUpdate() {
-	//UE_LOG(LogTemp, Warning, TEXT("TICK%d %d %d %d"), WallRunOnCooldown, WallRunning, WallRunningLeft, WallRunningRight);	
-	
-	if (WallRunOnCooldown) {
-		return;
-	}	
-	TArray<FVector> vectors = GetRightLeftVectors();
-	if (WallRunMovement(vectors[0], 1)) {
-		WallRunning = true;
-		WallRunningRight = true;
-		WallRunningLeft = false;
-		CharacterMovement->AirControl = 0;
-		if (UseGravity) {
-			CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, .02f, 10);
-		} else {
-			CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, 0, .02f, 10);
-		}
-	}
-	else if (WallRunningRight) {
-		WallRunEnd();
-	}
-	else {
-		if (WallRunMovement(vectors[1], -1)) {
-			WallRunning = true;
-			WallRunningRight = false;
-			WallRunningLeft = true;
-			CharacterMovement->AirControl = 0;
-			if (UseGravity) {
-				CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, .02f, 10);
-			} else {
-				CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, 0, .02f, 10);
-			}
-		}
-		else {
-			WallRunEnd();
-		}
-	}
-
-
 }
 
 void UWallRunComponent::WallRunEnd() {
@@ -150,9 +137,12 @@ bool UWallRunComponent::WallRunMovement(FVector ActionVector, float WallRunDirec
 #endif
 	if (hit1.bBlockingHit && IsValidWall(hit1.Normal) && CharacterMovement->IsFalling()) {
 		WallRunNormal = hit1.Normal;
-		Character->LaunchCharacter(GetPlayerToWallVector(), false, false); //stick to wall
-		Character->LaunchCharacter(FVector::CrossProduct(FVector::UpVector, WallRunNormal) * WallRunSpeed * WallRunDirection * ForwardInput, true, !UseGravity);//move forward
-		UE_LOG(LogTemp, Warning, TEXT("TICK%f %f %f"),GetPlayerToWallVector().X, GetPlayerToWallVector().Y, GetPlayerToWallVector().Z);	
+		//Character->LaunchCharacter(GetPlayerToWallVector(), false, false); //stick to wall
+		//Character->LaunchCharacter(FVector::CrossProduct(FVector::UpVector, WallRunNormal) * WallRunForceMultiplier * WallRunDirection * ForwardInput, true, !UseGravity);//move forward
+		FVector HorizontalVelocity = FVector(Character->GetVelocity().X, Character->GetVelocity().Y, 0);
+		if (HorizontalVelocity.Length() <= MaxWallRunVelocity) {
+			CharacterMovement->AddForce(FVector::CrossProduct(FVector::UpVector, WallRunNormal) * WallRunForceMultiplier * WallRunDirection * ForwardInput);
+		}
 		return true;
 	}
 	return false;
@@ -176,4 +166,8 @@ void UWallRunComponent::WallRunCooldownExpire() {
 
 void UWallRunComponent::SetForwardInput(float forwardInput) {
 	ForwardInput = forwardInput;
+}
+
+bool UWallRunComponent::IsWallRunning() {
+	return WallRunning;
 }
