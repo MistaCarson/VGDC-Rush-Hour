@@ -8,6 +8,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MovementComponents/WallRunComponent.h"
+#include "MovementComponents/DashComponent.h"
 #if WITH_EDITOR
 	#include "Kismet/KismetSystemLibrary.h"
 #endif
@@ -39,6 +40,7 @@ ARushHourCharacter::ARushHourCharacter()
 	CrouchSpeed = 13;
 
 	WallRunComp = CreateDefaultSubobject<UWallRunComponent>(TEXT("Wall Run Component"));
+	DashComp = CreateDefaultSubobject<UDashComponent>(TEXT("Dash Component"));
 }
 
 void ARushHourCharacter::BeginPlay()
@@ -55,6 +57,8 @@ void ARushHourCharacter::BeginPlay()
 		}
 	}
 	WallRunComp->Initialize(this);
+	DashComp->Initialize(this);
+	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ARushHourCharacter::OnCapsuleHit);
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -80,6 +84,8 @@ void ARushHourCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ARushHourCharacter::Sprint);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ARushHourCharacter::Sprint);
+
+		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &ARushHourCharacter::Dash);
 	}
 }
 
@@ -93,7 +99,12 @@ void ARushHourCharacter::Move(const FInputActionValue& Value)
 	{
 		// add movement 
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-		AddMovementInput(GetActorRightVector(), MovementVector.X);
+		if (Sprinting) {
+			AddMovementInput(GetActorRightVector(), MovementVector.X / 3);
+		}
+		else {
+			AddMovementInput(GetActorRightVector(), MovementVector.X);
+		}
 		WallRunComp->SetForwardInput(FMath::Clamp(MovementVector.Y, 0, 1));
 	}
 }
@@ -104,9 +115,11 @@ void ARushHourCharacter::Look(const FInputActionValue& Value)
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	if (Controller != nullptr)
 	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
+		if (LookWhileDashing || !DashComp->IsDashing()) {
+			// add yaw and pitch input to controller
+			AddControllerYawInput(LookAxisVector.X);
+			AddControllerPitchInput(LookAxisVector.Y);
+		}
 	}
 }
 
@@ -163,9 +176,11 @@ void ARushHourCharacter::Sprint(const FInputActionValue& Value)
 	const bool val = Value.Get<bool>();
 	if (val) {
 		GetCharacterMovement()->MaxWalkSpeed = 1200;
+		Sprinting = true;
 	} else
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 600;
+		Sprinting = false;
 	}
 }
 
@@ -180,4 +195,18 @@ void ARushHourCharacter::Jump() {
 	} else {
 		Super::Jump();
 	}
+}
+
+bool ARushHourCharacter::IsSprinting() {
+	return Sprinting;
+}
+
+void ARushHourCharacter::Dash(const FInputActionValue& Value) {
+	if (Value.Get<bool>() && AbilityData->MadDash) {
+		DashComp->Dash(AbilityData->MadDashDebugType);
+	}
+}
+
+void ARushHourCharacter::OnCapsuleHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& hit) {
+	DashComp->CancelDash();
 }

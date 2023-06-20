@@ -55,11 +55,17 @@ class ARushHourCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 		class UInputAction* LookAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+		class UInputAction* DashAction;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
 		float SlideSpeedThreshold = 20;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
 		class UWallRunComponent* WallRunComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
+		class UDashComponent* DashComp;
 
 public:
 	ARushHourCharacter();
@@ -71,6 +77,12 @@ public:
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	void Landed(const FHitResult& Hit) override;
+
+	UFUNCTION(BlueprintCallable)
+	bool IsSprinting();
+
+	UFUNCTION()
+	void OnCapsuleHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& hit);
 
 
 protected:
@@ -94,6 +106,14 @@ private:
 
 	void Sprint(const FInputActionValue& Value);
 
+	void Dash(const FInputActionValue& Value);
+	bool Sprinting = false;
+
+	// Can the player look around while dashing?
+	UPROPERTY(EditDefaultsOnly, Category = "Dash")
+	bool LookWhileDashing = false;
+
+	
 #if WITH_EDITORONLY_DATA
 private:
 	UPROPERTY(EditAnywhere, Category = "Debug")
