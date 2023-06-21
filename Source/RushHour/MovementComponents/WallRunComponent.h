@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Containers/Array.h"
 #include "Components/ActorComponent.h"
+#include "Delegates/Delegate.h"
 #include "WallRunComponent.generated.h"
 
 
@@ -32,6 +33,10 @@ public:
 	void SetForwardInput(float forwardInput);
 	
 	bool IsWallRunning();
+	
+	DECLARE_DELEGATE(OnWallRunDelegate);
+
+	OnWallRunDelegate WallRunStartEvent;
 
 protected:
 	// Called when the game starts

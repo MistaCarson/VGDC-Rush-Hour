@@ -59,6 +59,9 @@ void ARushHourCharacter::BeginPlay()
 	WallRunComp->Initialize(this);
 	DashComp->Initialize(this);
 	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ARushHourCharacter::OnCapsuleHit);
+	WallRunComp->WallRunStartEvent.BindUObject(DashComp, &UDashComponent::ResetDashes);
+	DashComp->SetNumberOfDashes(AbilityData->NumberDashes);
+	DefaultJumpVelocity = GetCharacterMovement()->JumpZVelocity;
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -98,15 +101,27 @@ void ARushHourCharacter::Move(const FInputActionValue& Value)
 	if (Controller != nullptr)
 	{
 		// add movement 
-		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-		if (Sprinting) {
-			AddMovementInput(GetActorRightVector(), MovementVector.X / 3);
+		if (!GetCharacterMovement()->IsFalling()) {
+			AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+			if (Sprinting && !GetCharacterMovement()->IsFalling()) {
+				AddMovementInput(GetActorRightVector(), MovementVector.X / 3);
+			}
+			else {
+				AddMovementInput(GetActorRightVector(), MovementVector.X);
+			}
 		}
 		else {
 			AddMovementInput(GetActorRightVector(), MovementVector.X);
+			if (InAirMovementTime > 0) {
+				AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+			} else if ((GetActorForwardVector() * MovementVector.Y).Dot(GetMovementComponent()->Velocity) < 0) {
+				AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+			}
 		}
 		WallRunComp->SetForwardInput(FMath::Clamp(MovementVector.Y, 0, 1));
+
 	}
+	LastMovementVector = MovementVector;
 }
 
 void ARushHourCharacter::Look(const FInputActionValue& Value)
@@ -131,10 +146,15 @@ void ARushHourCharacter::Tick(float DeltaSeconds)
 	JumpMaxCount = AbilityData->NumberMidairJumps + 1;
 	#if WITH_EDITOR
 	if (PrintCharacterSpeedToScreen) {
-		UKismetSystemLibrary::PrintString(GetWorld(), *FString::Printf(TEXT("Current Speed: %f"), GetMovementComponent()->Velocity.Length()), true, false, FColor::Red);
+		FVector2D LateralVelocity = FVector2D(GetMovementComponent()->Velocity.X, GetMovementComponent()->Velocity.Y);
+		UKismetSystemLibrary::PrintString(GetWorld(), *FString::Printf(TEXT("Current Speed: %f"), LateralVelocity.Length()), true, false, FColor::Red);
 	}
+	DashComp->SetNumberOfDashes(AbilityData->NumberDashes);
 	#endif
-		
+	if (InAirMovementTime > 0) {
+		InAirMovementTime -= DeltaSeconds;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("CanJump: %d"), CanJump());
 }
 
 void ARushHourCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
@@ -174,27 +194,70 @@ void ARushHourCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfH
 void ARushHourCharacter::Sprint(const FInputActionValue& Value)
 {
 	const bool val = Value.Get<bool>();
-	if (val) {
-		GetCharacterMovement()->MaxWalkSpeed = 1200;
-		Sprinting = true;
-	} else
-	{
-		GetCharacterMovement()->MaxWalkSpeed = 600;
-		Sprinting = false;
+	if (GetCharacterMovement()->IsFalling()) {
+		if (val) {
+			SprintPressedInAir = true;
+			SprintReleasedInAir = false;
+		}
+		else {
+			SprintPressedInAir = false;
+			SprintReleasedInAir = true;
+		}
+	}
+	else {
+		if (val) {
+			GetCharacterMovement()->MaxWalkSpeed = 1200;
+			Sprinting = true;
+		}
+		else
+		{
+			GetCharacterMovement()->MaxWalkSpeed = 600;
+			Sprinting = false;
+		}
 	}
 }
 
 void ARushHourCharacter::Landed(const FHitResult& Hit) {
 	Super::Landed(Hit);
 	WallRunComp->Land();
+	DashComp->ResetDashes();
+	if (SprintPressedInAir) {
+		SprintPressedInAir = false;
+		GetCharacterMovement()->MaxWalkSpeed = 1200;
+		Sprinting = true;
+	}
+	else if (SprintReleasedInAir) {
+		SprintReleasedInAir = false;
+		GetCharacterMovement()->MaxWalkSpeed = 600;
+		Sprinting = false;
+	}
 }
 
 void ARushHourCharacter::Jump() {
-	if (WallRunComp->IsWallRunning()) {
-		WallRunComp->Jump();
-	} else {
-		Super::Jump();
+	if (!DashComp->IsDashing()) {
+		if (WallRunComp->IsWallRunning()) {
+			WallRunComp->Jump();
+		}
+		else {
+			if (GetCharacterMovement()->IsFalling() && CanJump()) {
+				FVector LateralVelocity = FVector(GetCharacterMovement()->Velocity.X, GetCharacterMovement()->Velocity.Y, 0);
+				float Speed = LateralVelocity.Length();
+				LateralVelocity.Normalize();
+				FVector NewVelocity = LateralVelocity * Speed * .7;
+				NewVelocity.Z = GetCharacterMovement()->Velocity.Z;
+				GetCharacterMovement()->Velocity = NewVelocity;
+				GetCharacterMovement()->JumpZVelocity = AirJumpVelocity;
+				Super::Jump();
+				GetCharacterMovement()->JumpZVelocity = DefaultJumpVelocity; 
+				AddMovementInput(GetActorForwardVector(), LastMovementVector.Y);
+				InAirMovementTime = 1;
+			}
+			else {
+				Super::Jump();
+			}
+		}
 	}
+
 }
 
 bool ARushHourCharacter::IsSprinting() {

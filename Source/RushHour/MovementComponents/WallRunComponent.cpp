@@ -41,6 +41,9 @@ void UWallRunComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	}	
 	TArray<FVector> vectors = GetRightLeftVectors();
 	if (WallRunMovement(vectors[0], 1)) {
+		if (!WallRunning) {
+			WallRunStartEvent.Execute();
+		}
 		WallRunning = true;
 		WallRunningRight = true;
 		WallRunningLeft = false;
@@ -57,6 +60,9 @@ void UWallRunComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	}
 	else {
 		if (WallRunMovement(vectors[1], -1)) {
+			if (!WallRunning) {
+				WallRunStartEvent.Execute();
+			}
 			WallRunning = true;
 			WallRunningRight = false;
 			WallRunningLeft = true;

@@ -35,6 +35,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Dash")
 	float DashSpeedPenalty;
 
+	// Edit with the loadout data class
+	int NumberOfDashes = 1;
+
+	int NumDashesRemaining;
+
 	float CurrentDashSpeed = 0;
 
 	float DashTimeLeft = 0;
@@ -56,8 +61,13 @@ public:
 
 	// For when the dash is cancelled early (timer does not run out)
 	void CancelDash();
+
+	void SetNumberOfDashes(int NumDashes);
+
+	void ResetDashes();
 		
 private:
 	float PreDashSpeed;
 	FVector PreDashDirection;
+
 };

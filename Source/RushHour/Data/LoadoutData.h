@@ -21,6 +21,9 @@ public:
 	bool MadDash;
 
 	UPROPERTY(EditAnywhere)
+	int NumberDashes;
+
+	UPROPERTY(EditAnywhere)
 	int MadDashDebugType;
 
 	UPROPERTY(EditAnywhere)

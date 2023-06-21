@@ -25,7 +25,6 @@ void UDashComponent::BeginPlay()
 // Called every frame
 void UDashComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Dashing: %d"), Dashing);
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	if (Dashing && DashTimeLeft > 0) {
 		DashTimeLeft -= DeltaTime;
@@ -49,7 +48,10 @@ void UDashComponent::Initialize(ARushHourCharacter* player) {
 }
 
 void UDashComponent::Dash(int DashType) {
-	if (!Dashing) {
+	if (!CharacterMovement->IsFalling()) {
+		ResetDashes();
+	}
+	if (!Dashing && NumDashesRemaining > 0) {
 		PreDashSpeed = CharacterMovement->Velocity.Length();
 		PreDashDirection = Character->GetFirstPersonCameraComponent()->GetForwardVector();
 		switch (DashType) {
@@ -57,7 +59,7 @@ void UDashComponent::Dash(int DashType) {
 			CurrentDashSpeed = PreDashSpeed;
 			break;
 		case 1:
-			CurrentDashSpeed = PreDashSpeed * 1.3;
+			CurrentDashSpeed = PreDashSpeed + (400000 / FMath::Max(PreDashSpeed, 300));
 			break;
 		case 2:
 			CurrentDashSpeed = DashSpeed;
@@ -67,6 +69,7 @@ void UDashComponent::Dash(int DashType) {
 		}
 		DashTimeLeft = DashTime;
 		Dashing = true;
+		NumDashesRemaining--;
 	}
 
 }
@@ -78,4 +81,12 @@ void UDashComponent::CancelDash() {
 
 bool UDashComponent::IsDashing() {
 	return Dashing;
+}
+
+void UDashComponent::SetNumberOfDashes(int NumDashes) {
+	NumberOfDashes = NumDashes;
+}
+
+void UDashComponent::ResetDashes() {
+	NumDashesRemaining = NumberOfDashes;
 }

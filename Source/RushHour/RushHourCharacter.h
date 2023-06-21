@@ -67,6 +67,12 @@ class ARushHourCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
 		class UDashComponent* DashComp;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Movement: Jumping / Falling", meta = (AllowPrivateAccess = "true"))
+		float SpeedScaleOnAirJump = .7;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Movement: Jumping / Falling", meta = (AllowPrivateAccess = "true"))
+		float AirJumpVelocity = 800;
+
 public:
 	ARushHourCharacter();
 	void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
@@ -108,11 +114,19 @@ private:
 
 	void Dash(const FInputActionValue& Value);
 	bool Sprinting = false;
+	bool SprintPressedInAir = false;
+	bool SprintReleasedInAir = false;
 
 	// Can the player look around while dashing?
 	UPROPERTY(EditDefaultsOnly, Category = "Dash")
 	bool LookWhileDashing = false;
 
+	float DefaultJumpVelocity;
+
+	FVector2D LastMovementVector;
+
+	// Used after a double jump for air control
+	float InAirMovementTime = 0;
 	
 #if WITH_EDITORONLY_DATA
 private:
