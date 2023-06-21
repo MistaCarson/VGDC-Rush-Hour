@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Data/LoadoutData.h"
 #include "RushHourCharacter.generated.h"
 
 class UInputComponent;
@@ -13,6 +14,7 @@ class USceneComponent;
 class UCameraComponent;
 class UAnimMontage;
 class USoundBase;
+
 
 UCLASS(config=Game)
 class ARushHourCharacter : public ACharacter
@@ -53,11 +55,18 @@ class ARushHourCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 		class UInputAction* LookAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+		class UInputAction* DashAction;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Crouch", meta = (AllowPrivateAccess = "true"))
 		float SlideSpeedThreshold = 20;
 
-	float SlideCooldown = 1;
-	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
+		class UWallRunComponent* WallRunComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
+		class UDashComponent* DashComp;
+
 public:
 	ARushHourCharacter();
 	void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
@@ -67,16 +76,26 @@ public:
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+	void Landed(const FHitResult& Hit) override;
+
+	UFUNCTION(BlueprintCallable)
+	bool IsSprinting();
+
+	UFUNCTION()
+	void OnCapsuleHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& hit);
 
 
 protected:
 	virtual void BeginPlay();
 	virtual void Tick(float DeltaSeconds) override;
-
+	virtual void Jump() override;
 
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BlueprintProtected = "true"))
+	ULoadoutData* AbilityData;
 
 private:
 	/** Called for movement input */
@@ -86,5 +105,20 @@ private:
 	void Look(const FInputActionValue& Value);
 
 	void Sprint(const FInputActionValue& Value);
+
+	void Dash(const FInputActionValue& Value);
+	bool Sprinting = false;
+
+	// Can the player look around while dashing?
+	UPROPERTY(EditDefaultsOnly, Category = "Dash")
+	bool LookWhileDashing = false;
+
+	
+#if WITH_EDITORONLY_DATA
+private:
+	UPROPERTY(EditAnywhere, Category = "Debug")
+		bool PrintCharacterSpeedToScreen;
+#endif
+
 };
 

@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "RushHourGameMode.h"
-#include "RushHourCharacter.h"
+#include "RushHour/RushHourCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
 ARushHourGameMode::ARushHourGameMode()

@@ -7,6 +7,11 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "MovementComponents/WallRunComponent.h"
+#include "MovementComponents/DashComponent.h"
+#if WITH_EDITOR
+	#include "Kismet/KismetSystemLibrary.h"
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -33,6 +38,9 @@ ARushHourCharacter::ARushHourCharacter()
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 	CrouchEyeOffset = FVector(0);
 	CrouchSpeed = 13;
+
+	WallRunComp = CreateDefaultSubobject<UWallRunComponent>(TEXT("Wall Run Component"));
+	DashComp = CreateDefaultSubobject<UDashComponent>(TEXT("Dash Component"));
 }
 
 void ARushHourCharacter::BeginPlay()
@@ -48,7 +56,9 @@ void ARushHourCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
-
+	WallRunComp->Initialize(this);
+	DashComp->Initialize(this);
+	GetCapsuleComponent()->OnComponentHit.AddDynamic(this, &ARushHourCharacter::OnCapsuleHit);
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -59,11 +69,12 @@ void ARushHourCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		//Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-
+		//EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, WallRunComp, &UWallRunComponent::Jump);
 		//Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ARushHourCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ARushHourCharacter::Move);
 
 		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ARushHourCharacter::Look);
@@ -73,6 +84,8 @@ void ARushHourCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ARushHourCharacter::Sprint);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ARushHourCharacter::Sprint);
+
+		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &ARushHourCharacter::Dash);
 	}
 }
 
@@ -86,7 +99,13 @@ void ARushHourCharacter::Move(const FInputActionValue& Value)
 	{
 		// add movement 
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-		AddMovementInput(GetActorRightVector(), MovementVector.X);
+		if (Sprinting) {
+			AddMovementInput(GetActorRightVector(), MovementVector.X / 3);
+		}
+		else {
+			AddMovementInput(GetActorRightVector(), MovementVector.X);
+		}
+		WallRunComp->SetForwardInput(FMath::Clamp(MovementVector.Y, 0, 1));
 	}
 }
 
@@ -96,9 +115,11 @@ void ARushHourCharacter::Look(const FInputActionValue& Value)
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	if (Controller != nullptr)
 	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
+		if (LookWhileDashing || !DashComp->IsDashing()) {
+			// add yaw and pitch input to controller
+			AddControllerYawInput(LookAxisVector.X);
+			AddControllerPitchInput(LookAxisVector.Y);
+		}
 	}
 }
 
@@ -107,6 +128,13 @@ void ARushHourCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	float CrouchInterpTime = FMath::Min(1.f, CrouchSpeed * DeltaSeconds);
 	CrouchEyeOffset = (1.f - CrouchInterpTime) * CrouchEyeOffset;
+	JumpMaxCount = AbilityData->NumberMidairJumps + 1;
+	#if WITH_EDITOR
+	if (PrintCharacterSpeedToScreen) {
+		UKismetSystemLibrary::PrintString(GetWorld(), *FString::Printf(TEXT("Current Speed: %f"), GetMovementComponent()->Velocity.Length()), true, false, FColor::Red);
+	}
+	#endif
+		
 }
 
 void ARushHourCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
@@ -147,9 +175,38 @@ void ARushHourCharacter::Sprint(const FInputActionValue& Value)
 {
 	const bool val = Value.Get<bool>();
 	if (val) {
-		GetCharacterMovement()->MaxWalkSpeed = 1000;
+		GetCharacterMovement()->MaxWalkSpeed = 1200;
+		Sprinting = true;
 	} else
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 600;
+		Sprinting = false;
 	}
+}
+
+void ARushHourCharacter::Landed(const FHitResult& Hit) {
+	Super::Landed(Hit);
+	WallRunComp->Land();
+}
+
+void ARushHourCharacter::Jump() {
+	if (WallRunComp->IsWallRunning()) {
+		WallRunComp->Jump();
+	} else {
+		Super::Jump();
+	}
+}
+
+bool ARushHourCharacter::IsSprinting() {
+	return Sprinting;
+}
+
+void ARushHourCharacter::Dash(const FInputActionValue& Value) {
+	if (Value.Get<bool>() && AbilityData->MadDash) {
+		DashComp->Dash(AbilityData->MadDashDebugType);
+	}
+}
+
+void ARushHourCharacter::OnCapsuleHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& hit) {
+	DashComp->CancelDash();
 }
