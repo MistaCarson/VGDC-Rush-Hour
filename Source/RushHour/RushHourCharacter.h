@@ -67,6 +67,9 @@ class ARushHourCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
 		class UDashComponent* DashComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovementComponents", meta = (AllowPrivateAccess = "true"))
+		class USlideComponent* SlideComp;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Movement: Jumping / Falling", meta = (AllowPrivateAccess = "true"))
 		float SpeedScaleOnAirJump = .7;
 

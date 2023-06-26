@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MovementComponents/WallRunComponent.h"
 #include "MovementComponents/DashComponent.h"
+#include "MovementComponents/SlideComponent.h"
 #if WITH_EDITOR
 	#include "Kismet/KismetSystemLibrary.h"
 #endif
@@ -41,6 +42,7 @@ ARushHourCharacter::ARushHourCharacter()
 
 	WallRunComp = CreateDefaultSubobject<UWallRunComponent>(TEXT("Wall Run Component"));
 	DashComp = CreateDefaultSubobject<UDashComponent>(TEXT("Dash Component"));
+	SlideComp = CreateDefaultSubobject<USlideComponent>(TEXT("Slide Comp"));
 }
 
 void ARushHourCharacter::BeginPlay()
@@ -62,6 +64,7 @@ void ARushHourCharacter::BeginPlay()
 	WallRunComp->WallRunStartEvent.BindUObject(DashComp, &UDashComponent::ResetDashes);
 	DashComp->SetNumberOfDashes(AbilityData->NumberDashes);
 	DefaultJumpVelocity = GetCharacterMovement()->JumpZVelocity;
+	SlideComp->Initialize(this);
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -97,13 +100,16 @@ void ARushHourCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
+	if (SlideComp->IsSliding()) {
+		MovementVector = FVector2D::Zero();
+	}
 
 	if (Controller != nullptr)
 	{
 		// add movement 
 		if (!GetCharacterMovement()->IsFalling()) {
 			AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-			if (Sprinting && !GetCharacterMovement()->IsFalling()) {
+			if (Sprinting) {
 				AddMovementInput(GetActorRightVector(), MovementVector.X / 3);
 			}
 			else {
@@ -154,7 +160,6 @@ void ARushHourCharacter::Tick(float DeltaSeconds)
 	if (InAirMovementTime > 0) {
 		InAirMovementTime -= DeltaSeconds;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("CanJump: %d"), CanJump());
 }
 
 void ARushHourCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
@@ -176,7 +181,7 @@ void ARushHourCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHei
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	CrouchEyeOffset.Z += StartBaseEyeHeight - BaseEyeHeight - HalfHeightAdjust;
 	FirstPersonCameraComponent->SetRelativeLocation(FVector(0.f, 0.f, BaseEyeHeight), false);
-
+	SlideComp->EndSlide();
 }
 
 void ARushHourCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
@@ -189,6 +194,7 @@ void ARushHourCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfH
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	CrouchEyeOffset.Z += StartBaseEyeHeight - BaseEyeHeight + HalfHeightAdjust;
 	FirstPersonCameraComponent->SetRelativeLocation(FVector(0.f, 0.f, BaseEyeHeight), false);
+	SlideComp->TryBeginSlide();
 }
 
 void ARushHourCharacter::Sprint(const FInputActionValue& Value)

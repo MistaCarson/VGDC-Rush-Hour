@@ -76,7 +76,6 @@ void UDashComponent::Dash(int DashType) {
 
 void UDashComponent::CancelDash() {
 	Dashing = false;
-	UE_LOG(LogTemp, Warning, TEXT("HIT: Dash Cancelled"));
 }
 
 bool UDashComponent::IsDashing() {
