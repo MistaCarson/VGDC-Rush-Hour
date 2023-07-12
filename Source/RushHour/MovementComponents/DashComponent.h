@@ -69,5 +69,4 @@ public:
 private:
 	float PreDashSpeed;
 	FVector PreDashDirection;
-
 };

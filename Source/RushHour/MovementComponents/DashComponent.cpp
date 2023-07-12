@@ -30,6 +30,7 @@ void UDashComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorC
 		DashTimeLeft -= DeltaTime;
 		if (DashTimeLeft <= 0) {
 			Dashing = false;
+			Character->OnDashEnd();
 			FVector DashingVelocity = PreDashDirection * PreDashSpeed;
 			CharacterMovement->Velocity = DashingVelocity;
 		}
@@ -52,6 +53,7 @@ void UDashComponent::Dash(int DashType) {
 		ResetDashes();
 	}
 	if (!Dashing && NumDashesRemaining > 0) {
+		Character->OnDashBegin();
 		PreDashSpeed = CharacterMovement->Velocity.Length();
 		PreDashDirection = Character->GetFirstPersonCameraComponent()->GetForwardVector();
 		switch (DashType) {
@@ -75,6 +77,7 @@ void UDashComponent::Dash(int DashType) {
 }
 
 void UDashComponent::CancelDash() {
+	Character->OnDashEnd();
 	Dashing = false;
 }
 

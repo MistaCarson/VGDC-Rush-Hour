@@ -93,6 +93,11 @@ public:
 	UFUNCTION()
 	void OnCapsuleHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& hit);
 
+	/** Functions for Starting and Ending the Dash */
+	UFUNCTION(BlueprintImplementableEvent)
+		void OnDashBegin();
+	UFUNCTION(BlueprintImplementableEvent)
+		void OnDashEnd();
 
 protected:
 	virtual void BeginPlay();
