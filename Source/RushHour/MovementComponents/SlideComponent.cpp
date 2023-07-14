@@ -4,6 +4,8 @@
 #include "SlideComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Math/UnrealMathUtility.h"
+#include "RushHour/RushHourCharacter.h"
 
 // Sets default values for this component's properties
 USlideComponent::USlideComponent()
@@ -35,13 +37,22 @@ void USlideComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 		GetOwner()->GetWorld()->LineTraceSingleByChannel(hit1, Character->GetActorLocation(), Character->GetActorLocation() + 100*FVector::DownVector, ECollisionChannel::ECC_Visibility);
 		if (hit1.bBlockingHit) {
 			FVector GroundNormal = hit1.ImpactNormal;
-			float Slope = FMath::Acos(GroundNormal.Z);
-			UE_LOG(LogTemp, Warning, TEXT("Slope: %f"), Slope);
+			float Slope = FMath::Acos(GroundNormal.Z) * 180 / PI;
+			FVector SideVector = GroundNormal.Cross(FVector::DownVector);
+			SideVector.Normalize();
+			FVector DirectionOfSlide = SideVector.Cross(GroundNormal);
+			DirectionOfSlide.Normalize();
+			FVector ProjectedForwardVector = (Character->GetActorForwardVector() - (Character->GetActorForwardVector().Dot(GroundNormal) * GroundNormal));
+			ProjectedForwardVector.Normalize();
+			float SlideMagnitude = FMath::Max(ProjectedForwardVector.Dot(DirectionOfSlide), 0) * FMath::Min(Slope / MaxSlideSpeedAngle, 1) * MaxSlideMultiplier;
+			CharacterMovement->AddForce(DirectionOfSlide * SlideMagnitude);
+
+			UE_LOG(LogTemp, Warning, TEXT("X: %f, Y: %f, Z: %f"), DirectionOfSlide.X, DirectionOfSlide.Y, DirectionOfSlide.Z);
 		}
 	}
 }
 
-void USlideComponent::Initialize(ACharacter* player) {
+void USlideComponent::Initialize(ARushHourCharacter* player) {
 	Character = player;
 	CharacterMovement = Character->GetCharacterMovement();
 	DefaultFriction = CharacterMovement->GroundFriction;
@@ -53,13 +64,14 @@ bool USlideComponent::IsSliding() {
 
 void USlideComponent::TryBeginSlide() {
 	if (CharacterMovement->IsFalling()) {
-
+		//Air stomp slide?
 	}
 	else {
 		FVector2D HorizontalVelocity = FVector2D(CharacterMovement->Velocity.X, CharacterMovement->Velocity.Y);
 		if (HorizontalVelocity.Length() > BeginSlideSpeedThreshold) {
 			Sliding = true;
-			CharacterMovement->GroundFriction = .2;
+			CharacterMovement->GroundFriction = SlideFriction;
+			Character->OnSlideBegin();
 		}
 	}
 }
@@ -67,6 +79,7 @@ void USlideComponent::TryBeginSlide() {
 void USlideComponent::EndSlide() {
 	Sliding = false;
 	CharacterMovement->GroundFriction = DefaultFriction;
+	Character->OnSlideEnd();
 }
 
 void USlideComponent::CharacterLanded() {

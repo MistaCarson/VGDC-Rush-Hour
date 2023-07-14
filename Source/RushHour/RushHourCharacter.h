@@ -98,6 +98,10 @@ public:
 		void OnDashBegin();
 	UFUNCTION(BlueprintImplementableEvent)
 		void OnDashEnd();
+	UFUNCTION(BlueprintImplementableEvent)
+		void OnSlideBegin();
+	UFUNCTION(BlueprintImplementableEvent)
+		void OnSlideEnd();
 
 protected:
 	virtual void BeginPlay();

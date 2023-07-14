@@ -15,7 +15,7 @@ class RUSHHOUR_API USlideComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	USlideComponent();
-	void Initialize(ACharacter* player);
+	void Initialize(class ARushHourCharacter* player);
 	void EndSlide();
 	bool IsSliding();
 	void TryBeginSlide();
@@ -27,17 +27,24 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
-	ACharacter* Character;
+	ARushHourCharacter* Character;
 	class UCharacterMovementComponent* CharacterMovement;
 	bool Sliding = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BlueprintProtected = "true"), Category = "Sliding")
 	float BeginSlideSpeedThreshold = 400;
+
+	
+	//Angle at which the max sliding speed is achieved
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BlueprintProtected = "true"), Category = "Sliding")
-	float MaxAngleSlide = 45;
+	float MaxSlideSpeedAngle = 70;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BlueprintProtected = "true"), Category = "Sliding")
-	float MaxSlideSpeed = 3000;
+	float MaxSlideMultiplier = 150000;	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (BlueprintProtected = "true"), Category = "Sliding")
+	float SlideFriction = .7;
+
+
 
 private:
-	float DefaultFriction;
+	float DefaultFriction = 4.0f;
 		
 };

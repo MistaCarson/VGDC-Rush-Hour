@@ -66,6 +66,7 @@ void UWallRunComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 			WallRunning = true;
 			WallRunningRight = false;
 			WallRunningLeft = true;
+
 			CharacterMovement->AirControl = 0;
 			if (UseGravity) {
 				CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, DeltaTime, 10);

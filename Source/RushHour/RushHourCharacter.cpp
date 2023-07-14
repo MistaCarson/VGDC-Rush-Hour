@@ -195,6 +195,7 @@ void ARushHourCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfH
 	CrouchEyeOffset.Z += StartBaseEyeHeight - BaseEyeHeight + HalfHeightAdjust;
 	FirstPersonCameraComponent->SetRelativeLocation(FVector(0.f, 0.f, BaseEyeHeight), false);
 	SlideComp->TryBeginSlide();
+	
 }
 
 void ARushHourCharacter::Sprint(const FInputActionValue& Value)
@@ -259,6 +260,9 @@ void ARushHourCharacter::Jump() {
 				InAirMovementTime = 1;
 			}
 			else {
+				if (GetCharacterMovement()->IsCrouching()) {
+					UnCrouch();
+				}
 				Super::Jump();
 			}
 		}
